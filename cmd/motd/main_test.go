@@ -101,7 +101,7 @@ longitude = -79.38
 	}
 	cfg.HideLoad, cfg.HideUptime = false, false
 	show(&out, local, now, cfg, "gateway", operatingSystem{label: "Fedora", logo: "fedora"}, stats, false, false)
-	const want = "Load average:  2.44 2.65 2.44\nUptime:        20:13:46\n"
+	const want = "\nLoad average:  2.44 2.65 2.44\nUptime:        20:13:46\n\n"
 	if out.String() != want {
 		t.Fatalf("got %q, want %q", out.String(), want)
 	}
@@ -129,7 +129,7 @@ func TestCPUReadingAndDisplay(t *testing.T) {
 	}
 	var out bytes.Buffer
 	show(&out, cache{}, time.Now(), config{Location: "Toronto, CA"}, "gateway", operatingSystem{label: "Fedora"}, stats, false, false)
-	want := "OS:            Fedora\nKernel:        6.15.0\nHostname:      gateway\nLocation:      Toronto, CA\nLoad average:  0.10 0.20 0.30  ·  CPU 46°C\n"
+	want := "\nOS:            Fedora\nKernel:        6.15.0\nHostname:      gateway\nLocation:      Toronto, CA\nLoad average:  0.10 0.20 0.30  ·  CPU 46°C\n\n"
 	if out.String() != want {
 		t.Fatalf("got %q, want %q", out.String(), want)
 	}
@@ -165,5 +165,34 @@ func TestSystemAndExplicitPaths(t *testing.T) {
 	configFile, cacheFile, err = resolvePaths("/tmp/custom.toml", "/tmp/custom.json")
 	if err != nil || configFile != "/tmp/custom.toml" || cacheFile != "/tmp/custom.json" {
 		t.Fatalf("unexpected explicit paths: %q, %q, %v", configFile, cacheFile, err)
+	}
+}
+
+func TestBannerPaddingIncludesInlineArtwork(t *testing.T) {
+	var out bytes.Buffer
+	show(&out, cache{}, time.Now(), config{Artwork: "flag", Country: "ca"}, "gateway", operatingSystem{}, systemStats{}, true, true)
+	got := out.String()
+	if !strings.HasPrefix(got, "\n\x1b_Ga=T,") || !strings.HasSuffix(got, "\n\n") || strings.HasSuffix(got, "\n\n\n") {
+		t.Fatal("expected one blank line before the inline flag and after the banner")
+	}
+}
+
+func TestAPTUpdateDisplay(t *testing.T) {
+	now := time.Now()
+	zero, one, two := 0, 1, 2
+	for _, tc := range []struct {
+		available *int
+		indexDate time.Time
+		want      string
+	}{
+		{nil, time.Time{}, "APT status unavailable"},
+		{&zero, now, "No updates"},
+		{&one, now, "1 package update available"},
+		{&two, now.Add(-72 * time.Hour), "2 package updates available · APT indexes 3d old"},
+	} {
+		status := updateStatus{ReadAt: now, APT: &aptUpdateStatus{tc.available, tc.indexDate}}
+		if got := status.display(now); got != tc.want {
+			t.Errorf("got %q, want %q", got, tc.want)
+		}
 	}
 }

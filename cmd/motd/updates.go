@@ -3,31 +3,40 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 )
 
+type aptUpdateStatus struct {
+	Available *int      `json:"available"`
+	IndexDate time.Time `json:"index_date,omitzero"`
+}
+
 type updateStatus struct {
-	ReadAt     time.Time `json:"read_at"`
-	Staged     string    `json:"staged,omitempty"`
-	AutoReboot bool      `json:"auto_reboot,omitempty"`
-	LastCheck  time.Time `json:"last_check,omitzero"`
-	NextCheck  time.Time `json:"next_check,omitzero"`
-	CheckState string    `json:"check_state,omitempty"`
+	APT        *aptUpdateStatus `json:"apt,omitempty"`
+	ReadAt     time.Time        `json:"read_at"`
+	Staged     string           `json:"staged,omitempty"`
+	AutoReboot bool             `json:"auto_reboot,omitempty"`
+	LastCheck  time.Time        `json:"last_check,omitzero"`
+	NextCheck  time.Time        `json:"next_check,omitzero"`
+	CheckState string           `json:"check_state,omitempty"`
 }
 
 func readUpdates() *updateStatus {
 	if runtime.GOOS != "linux" {
 		return nil
 	}
-	path, err := exec.LookPath("rpm-ostree")
-	if err != nil {
-		return nil
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	path, err := exec.LookPath("rpm-ostree")
+	if err != nil {
+		return readAPTUpdates(ctx)
+	}
 
 	var deployments struct {
 		Deployments []struct {
@@ -96,9 +105,56 @@ func readUpdates() *updateStatus {
 	return status
 }
 
+func readAPTUpdates(ctx context.Context) *updateStatus {
+	path, err := exec.LookPath("apt")
+	if err != nil {
+		return nil
+	}
+	apt := &aptUpdateStatus{}
+	status := &updateStatus{ReadAt: time.Now(), APT: apt}
+
+	// APT can report zero candidates with no indexes at all. Require package metadata.
+	indexes, _ := filepath.Glob("/var/lib/apt/lists/*_Packages*")
+	for _, index := range indexes {
+		if info, err := os.Stat(index); err == nil && info.Size() > 0 && info.ModTime().After(apt.IndexDate) {
+			apt.IndexDate = info.ModTime()
+		}
+	}
+	if apt.IndexDate.IsZero() {
+		return status
+	}
+	cmd := exec.CommandContext(ctx, path, "list", "--upgradable")
+	cmd.Env = append(cmd.Environ(), "LC_ALL=C")
+	if out, err := cmd.Output(); err == nil {
+		count := strings.Count(string(out), " [upgradable from:")
+		apt.Available = &count
+	}
+	return status
+}
+
+func (s aptUpdateStatus) display(now time.Time) string {
+	if s.Available == nil {
+		return "APT status unavailable"
+	}
+	message := "No updates"
+	switch count := *s.Available; {
+	case count == 1:
+		message = "1 package update available"
+	case count > 1:
+		message = fmt.Sprintf("%d package updates available", count)
+	}
+	if age := now.Sub(s.IndexDate); age >= 48*time.Hour {
+		message += fmt.Sprintf(" · APT indexes %dd old", int(age.Hours()/24))
+	}
+	return message
+}
+
 func (s *updateStatus) display(now time.Time) string {
 	if s == nil || now.Sub(s.ReadAt) >= 2*time.Hour {
 		return ""
+	}
+	if s.APT != nil {
+		return s.APT.display(now)
 	}
 	if s.Staged != "" {
 		if s.AutoReboot {

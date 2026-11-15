@@ -14,7 +14,13 @@ type bannerField struct{ label, value string }
 
 func show(out io.Writer, local cache, now time.Time, cfg config, host string, system operatingSystem, stats systemStats, color, graphics bool) {
 	fields := bannerFields(local, now, cfg, host, system, stats)
-	rows, width := artwork(out, cfg, system, color, graphics)
+	var inlineArtwork strings.Builder
+	rows, width := artwork(&inlineArtwork, cfg, system, color, graphics)
+	if len(fields) == 0 && len(rows) == 0 {
+		return
+	}
+	fmt.Fprintln(out)
+	fmt.Fprint(out, inlineArtwork.String())
 	start := max(0, len(rows)-len(fields)) / 2
 	labelWidth := 0
 	for _, field := range fields {
@@ -42,6 +48,7 @@ func show(out io.Writer, local cache, now time.Time, cfg config, host string, sy
 		}
 		fmt.Fprintln(out)
 	}
+	fmt.Fprintln(out)
 }
 
 func bannerFields(local cache, now time.Time, cfg config, host string, system operatingSystem, stats systemStats) []bannerField {

@@ -33,7 +33,7 @@ Start with the [annotated example](config.example.toml) or the [minimal example]
 
 Both `show` and `refresh` accept `-config FILE` and `-cache FILE`. On Linux, a system-wide install can place its defaults in `/etc/motd.toml` and share its cache at `/var/cache/motd/cache.json`. Keep public IPv4 hidden if the cache is shared.
 
-Run `motd refresh` as the same user from a timer or cron, for example every 20 minutes. It caches weather, public IPv4 when enabled, and local rpm-ostree update status. Missing and expired readings are omitted. CPU temperature appears on Linux hosts with a supported sensor. [Open-Meteo](https://open-meteo.com/) · [ipify](https://www.ipify.org/)
+Run `motd refresh` as the same user from a timer or cron, for example every 20 minutes. It caches weather, public IPv4 when enabled, and local rpm-ostree update status. The Updates row uses local rpm-ostree status or APT’s cached package indexes, depending on the host. MOTD refresh does not update package indexes or install packages. Missing and expired readings are omitted. CPU temperature appears on Linux hosts with a supported sensor. [Open-Meteo](https://open-meteo.com/) · [ipify](https://www.ipify.org/)
 
 ## Build from source
 
