@@ -1,0 +1,26 @@
+# Copy to config.toml and adjust to suit this host.
+# Artwork options: os, flag, both, none. flag/both require ca, us, or gb.
+# both adds an OS badge beside the OS label when inline graphics are available.
+artwork = "both"
+country = "ca"
+hostname = "gateway"
+location = "Toronto, CA"
+
+# hidden skips the lookup. masked displays 203.0.x.x. full shows all octets.
+# Both masked and full store the full address in the private cache.
+public_ipv4 = "hidden"
+
+hide_os = false
+hide_updates = false
+hide_kernel = true
+hide_hostname = false
+hide_location = false
+hide_weather = false
+hide_load = false
+hide_cpu_temp = false
+hide_uptime = false
+
+# Remove this section to disable weather, or set hide_weather = true above.
+[weather]
+latitude = 43.65
+longitude = -79.38

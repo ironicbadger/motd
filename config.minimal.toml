@@ -1,0 +1,5 @@
+# A compact, text-only banner with OS, hostname, and uptime.
+artwork = "none"
+hide_updates = true
+hide_load = true
+hide_cpu_temp = true
