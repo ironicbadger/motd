@@ -2,7 +2,7 @@
 
 A configurable login banner for Linux and macOS. Show your host, system stats, and local weather with a distro logo or flag.
 
-![motd on Fedora CoreOS (uCore) with a Fedora icon, Canadian flag, and rpm-ostree update status](docs/motd-updates.png)
+![motd on Fedora CoreOS (uCore) with a Fedora icon, Canadian flag, and rpm-ostree update status](docs/motd-ucore.png)
 
 ## Quick start 
 
