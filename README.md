@@ -2,7 +2,7 @@
 
 A configurable login banner for Linux and macOS. Show your host, system stats, and local weather with a distro logo or flag.
 
-![motd login banner with the Canadian flag, host details, weather, load, and uptime](docs/motd.png)
+![motd login banner with the Canadian flag, host details, weather, load, and uptime](docs/motd-preview.png)
 
 ## Quick start 
 
