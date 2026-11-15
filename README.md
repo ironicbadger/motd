@@ -4,7 +4,7 @@ A configurable login banner for Linux and macOS. Show your host, system stats, a
 
 ![motd login banner with the Canadian flag, host details, weather, load, and uptime](docs/motd.png)
 
-## Quick start
+## Quick start 
 
 Download the binary for your OS and architecture, rename it to `motd`, run `chmod +x motd`, and put it on your `PATH`. [Releases](https://github.com/ironicbadger/motd/releases)
 
