@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -27,17 +26,9 @@ func run(args []string) error {
 		return fmt.Errorf("unknown command %q, use show, refresh, or flags", command)
 	}
 
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return err
-	}
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return err
-	}
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
-	cachePath := flags.String("cache", filepath.Join(cacheDir, "motd", "cache.json"), "path to the local cache")
-	configPath := flags.String("config", filepath.Join(configDir, "motd", "config.toml"), "path to the display config")
+	cachePath := flags.String("cache", "", "path to the local cache")
+	configPath := flags.String("config", "", "path to the display config")
 	var host, osName, colorMode string
 	var ansi bool
 	if command != "refresh" {
@@ -51,6 +42,7 @@ func run(args []string) error {
 	}
 
 	var color, graphics bool
+	var err error
 	if command != "refresh" {
 		color, graphics, err = terminalStyle(colorMode, ansi)
 		if err != nil {
@@ -61,12 +53,16 @@ func run(args []string) error {
 		showFlags(os.Stdout, color, graphics)
 		return nil
 	}
-	cfg, err := loadConfig(*configPath, !explicitFlag(flags, "config"))
+	configFile, cacheFile, err := resolvePaths(*configPath, *cachePath)
+	if err != nil {
+		return err
+	}
+	cfg, err := loadConfig(configFile, *configPath == "")
 	if err != nil {
 		return err
 	}
 	if command == "refresh" {
-		return refresh(*cachePath, cfg)
+		return refresh(cacheFile, cfg)
 	}
 
 	if host == "" {
@@ -79,16 +75,8 @@ func run(args []string) error {
 	if osName != "" {
 		system.label = osName
 	}
-	show(os.Stdout, readCache(*cachePath), time.Now(), cfg, host, system, readStats(cfg), color, graphics)
+	show(os.Stdout, readCache(cacheFile), time.Now(), cfg, host, system, readStats(cfg), color, graphics)
 	return nil
-}
-
-func explicitFlag(flags *flag.FlagSet, name string) bool {
-	found := false
-	flags.Visit(func(f *flag.Flag) {
-		found = found || f.Name == name
-	})
-	return found
 }
 
 func terminalStyle(mode string, ansi bool) (color, graphics bool, err error) {

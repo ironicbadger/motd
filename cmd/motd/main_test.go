@@ -156,3 +156,14 @@ func TestUpdateRow(t *testing.T) {
 		t.Fatalf("expired status rendered: %q", got)
 	}
 }
+
+func TestSystemAndExplicitPaths(t *testing.T) {
+	configFile, cacheFile, err := resolvePaths("/etc/motd.toml", "")
+	if err != nil || configFile != "/etc/motd.toml" || cacheFile != "/var/cache/motd/cache.json" {
+		t.Fatalf("unexpected system paths: %q, %q, %v", configFile, cacheFile, err)
+	}
+	configFile, cacheFile, err = resolvePaths("/tmp/custom.toml", "/tmp/custom.json")
+	if err != nil || configFile != "/tmp/custom.toml" || cacheFile != "/tmp/custom.json" {
+		t.Fatalf("unexpected explicit paths: %q, %q, %v", configFile, cacheFile, err)
+	}
+}

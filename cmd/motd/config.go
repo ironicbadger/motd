@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -33,6 +34,41 @@ type config struct {
 type weather struct {
 	Latitude  *float64 `json:"latitude" toml:"latitude"`
 	Longitude *float64 `json:"longitude" toml:"longitude"`
+}
+
+const systemConfig = "/etc/motd.toml"
+const systemCache = "/var/cache/motd/cache.json"
+
+func resolvePaths(configPath, cachePath string) (string, string, error) {
+	if configPath == "" {
+		dir, err := os.UserConfigDir()
+		if err == nil {
+			configPath = filepath.Join(dir, "motd", "config.toml")
+		}
+		// Prefer per-user configuration, including the legacy JSON filename.
+		missing := func(path string) bool {
+			_, err := os.Stat(path)
+			return errors.Is(err, os.ErrNotExist)
+		}
+		if runtime.GOOS == "linux" && !missing(systemConfig) &&
+			(err != nil || (missing(configPath) && missing(strings.TrimSuffix(configPath, ".toml")+".json"))) {
+			configPath = systemConfig
+		} else if err != nil {
+			return "", "", err
+		}
+	}
+	if cachePath == "" {
+		if configPath == systemConfig {
+			cachePath = systemCache
+		} else {
+			dir, err := os.UserCacheDir()
+			if err != nil {
+				return "", "", err
+			}
+			cachePath = filepath.Join(dir, "motd", "cache.json")
+		}
+	}
+	return configPath, cachePath, nil
 }
 
 // loadConfig overlays a file on the defaults. The implicit TOML path also supports legacy JSON.
