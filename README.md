@@ -1,4 +1,4 @@
-# motd
+# ironicbadger/motd
 
 A configurable login banner for Linux and macOS. Show your host, system stats, and local weather with a distro logo or flag.
 
