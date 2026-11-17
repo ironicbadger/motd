@@ -8,6 +8,7 @@ location = "Toronto, CA"
 
 # hidden skips the lookup. masked displays 203.0.x.x. full shows all octets.
 # Both masked and full store the full address in the private cache.
+# The shared Linux cache skips public IPv4 lookups in every mode.
 public_ipv4 = "hidden"
 
 hide_os = false

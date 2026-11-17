@@ -8,6 +8,8 @@ A configurable login banner for Linux and macOS. Show your host, system stats, a
 
 Download the binary for your OS and architecture, rename it to `motd`, run `chmod +x motd`, and put it on your `PATH`. [Releases](https://github.com/ironicbadger/motd/releases)
 
+Run `motd --version` to check the installed release. Development builds from a Git checkout report the commit and mark local changes with `.dirty`.
+
 Or install with Go 1.25 or later:
 
 ```sh
@@ -20,7 +22,17 @@ Make sure your Go binary directory (`go env GOBIN`, or `$(go env GOPATH)/bin` wh
 motd show
 ```
 
-Add `motd show` to your interactive login hook. It reads local system data and cached readings, so it works offline. Ghostty and Kitty show inline artwork. Other color terminals use ANSI art. Use `-ansi` to force ANSI or `-color never` for plain text. Preview flags with `motd flags`.
+`motd show` reads local system data and cached readings, so it works offline. Ghostty and Kitty show inline artwork. Other color terminals use ANSI art. Use `-ansi` to force ANSI or `-color never` for plain text. Preview flags with `motd flags`.
+
+## Show the banner on Linux SSH login
+
+For Bash, copy [the SSH hook](contrib/motd-ssh.sh) to `~/.config/motd/ssh.sh`. Source it after setting your `PATH` in your existing login startup file. Bash reads the first of `~/.bash_profile`, `~/.bash_login`, and `~/.profile` that exists and is readable.
+
+```sh
+. "$HOME/.config/motd/ssh.sh"
+```
+
+For all users, install the hook under `/etc/profile.d/` on distributions that source that directory. Use one installation method to avoid printing the banner twice. The hook checks for an interactive shell, an SSH TTY, and terminal output, so SSH remote commands and file transfers receive no banner.
 
 ## Configure
 
@@ -31,9 +43,19 @@ Start with the [annotated example](config.example.toml) or the [minimal example]
 | Linux | `$XDG_CONFIG_HOME`, or `~/.config` |
 | macOS | `~/Library/Application Support` |
 
-Both `show` and `refresh` accept `-config FILE` and `-cache FILE`. On Linux, a system-wide install can place its defaults in `/etc/motd.toml` and share its cache at `/var/cache/motd/cache.json`. Keep public IPv4 hidden if the cache is shared.
+Both `show` and `refresh` accept `-config FILE` and `-cache FILE`. For a per-user install, schedule `motd refresh` as that user, for example every 20 minutes. Per-user and custom cache paths have private files.
 
-Run `motd refresh` as the same user from a timer or cron, for example every 20 minutes. It caches weather, public IPv4 when enabled, and local rpm-ostree update status. The Updates row uses local rpm-ostree status or APT’s cached package indexes, depending on the host. MOTD refresh does not update package indexes or install packages. Missing and expired readings are omitted. CPU temperature appears on Linux hosts with a supported sensor. [Open-Meteo](https://open-meteo.com/) · [ipify](https://www.ipify.org/)
+For a system-wide Linux install, put the binary at `/usr/local/bin/motd` and the config at `/etc/motd.toml`. Install the service and timer files under `/etc/systemd/system/`. [Service file](contrib/motd-refresh.service) · [Timer file](contrib/motd-refresh.timer)
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now motd-refresh.timer
+sudo systemctl start motd-refresh.service
+```
+
+The system service writes `/var/cache/motd/cache.json` so regular users can read cached weather and update status. MOTD skips public IPv4 lookups and omits the address for that shared path. A per-user config takes precedence and uses its own cache by default.
+
+The Updates row uses local rpm-ostree status or APT’s cached package indexes, depending on the host. MOTD refresh does not update package indexes or install packages. Missing and expired readings are omitted. CPU temperature appears on Linux hosts with a supported sensor. [Open-Meteo](https://open-meteo.com/) · [ipify](https://www.ipify.org/)
 
 ## Build from source
 

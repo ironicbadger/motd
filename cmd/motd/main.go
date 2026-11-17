@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -17,10 +18,17 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: motd show | motd refresh | motd flags (use -h after a command for options)")
+		return errors.New("usage: motd show | motd refresh | motd flags | motd --version (use -h after a command for options)")
 	}
 	command := args[0]
 	switch command {
+	case "--version":
+		if len(args) != 1 {
+			return errors.New("--version does not accept arguments")
+		}
+		info, _ := debug.ReadBuildInfo()
+		_, err := fmt.Fprintln(os.Stdout, versionString(releaseVersion, info))
+		return err
 	case "show", "refresh", "flags":
 	default:
 		return fmt.Errorf("unknown command %q, use show, refresh, or flags", command)
@@ -53,7 +61,7 @@ func run(args []string) error {
 		showFlags(os.Stdout, color, graphics)
 		return nil
 	}
-	configFile, cacheFile, err := resolvePaths(*configPath, *cachePath)
+	configFile, resolvedCachePath, err := resolvePaths(*configPath, *cachePath)
 	if err != nil {
 		return err
 	}
@@ -61,8 +69,9 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	target := newCacheFile(resolvedCachePath)
 	if command == "refresh" {
-		return refresh(cacheFile, cfg)
+		return refresh(target, cfg)
 	}
 
 	if host == "" {
@@ -75,7 +84,7 @@ func run(args []string) error {
 	if osName != "" {
 		system.label = osName
 	}
-	show(os.Stdout, readCache(cacheFile), time.Now(), cfg, host, system, readStats(cfg), color, graphics)
+	show(os.Stdout, target.read(), time.Now(), cfg, host, system, readStats(cfg), color, graphics)
 	return nil
 }
 

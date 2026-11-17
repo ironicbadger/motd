@@ -23,10 +23,26 @@ jobs:
         run: go test ./...
       - name: Vet
         run: go vet ./...
-      - name: Build
-        run: go build -trimpath -o motd ./cmd/motd
+      - name: Build and check version
         env:
           CGO_ENABLED: '0'
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          go build -buildvcs=true -trimpath -ldflags="-X main.releaseVersion=$RELEASE_TAG" -o motd ./cmd/motd
+          version=$(./motd --version)
+          if [ -n "$RELEASE_TAG" ]; then
+            test "$version" = "$RELEASE_TAG"
+          else
+            [[ "$version" == devel+* ]]
+          fi
+      - name: Test SSH login
+        if: runner.os == 'Linux'
+        run: |
+          if [ ! -x /usr/sbin/sshd ]; then
+            sudo apt-get update
+            sudo apt-get install -y openssh-server
+          fi
+          sudo bash tests/ssh.sh ./motd
 
   release:
     name: Release binaries
@@ -43,13 +59,15 @@ jobs:
       - name: Build binaries and checksums
         env:
           CGO_ENABLED: '0'
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           mkdir -p dist
           for os in linux darwin; do
             for arch in amd64 arm64; do
-              GOOS="$os" GOARCH="$arch" go build -trimpath -o "dist/motd_${os}_${arch}" ./cmd/motd
+              GOOS="$os" GOARCH="$arch" go build -buildvcs=true -trimpath -ldflags="-X main.releaseVersion=$RELEASE_TAG" -o "dist/motd_${os}_${arch}" ./cmd/motd
             done
           done
+          test "$(./dist/motd_linux_amd64 --version)" = "$RELEASE_TAG"
           cd dist
           sha256sum motd_* > checksums.txt
       - name: Publish release

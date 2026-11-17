@@ -1,0 +1,7 @@
+[Unit]
+Description=Refresh the shared MOTD cache
+ConditionPathExists=/etc/motd.toml
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/motd refresh -config /etc/motd.toml

@@ -29,9 +29,9 @@ func (cfg config) weatherEndpoint() string {
 }
 
 // refresh keeps the last successful reading on a fetch error and clears disabled readings.
-func refresh(path string, cfg config) error {
+func refresh(target cacheFile, cfg config) error {
 	client := &http.Client{Timeout: 3 * time.Second}
-	local := readCache(path)
+	local := target.read()
 	var weatherErr, ipErr error
 	var requests sync.WaitGroup
 	if cfg.HideUpdates {
@@ -53,7 +53,7 @@ func refresh(path string, cfg config) error {
 			weatherErr = local.Weather.update(fetchWeather(client, endpoint))
 		})
 	}
-	if cfg.PublicIPv4 == "hidden" {
+	if target.shared || cfg.PublicIPv4 == "hidden" {
 		local.IPv4 = reading{}
 	} else {
 		requests.Go(func() {
@@ -61,7 +61,7 @@ func refresh(path string, cfg config) error {
 		})
 	}
 	requests.Wait()
-	return errors.Join(writeCache(path, local), weatherErr, ipErr)
+	return errors.Join(target.write(local), weatherErr, ipErr)
 }
 
 func (r *reading) update(text string, err error) error {

@@ -41,10 +41,11 @@ func TestDefaultConfigClearsIPWithoutLookup(t *testing.T) {
 	if err != nil || cfg.PublicIPv4 != "hidden" || !cfg.HideKernel || cfg.HideUpdates {
 		t.Fatalf("unexpected defaults %+v, %v", cfg, err)
 	}
-	if err := writeCache(file, cache{IPv4: reading{"203.0.113.42", time.Now()}}); err != nil {
+	target := newCacheFile(file)
+	if err := target.write(cache{IPv4: reading{"203.0.113.42", time.Now()}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := refresh(file, cfg); err != nil {
+	if err := refresh(target, cfg); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(file)
